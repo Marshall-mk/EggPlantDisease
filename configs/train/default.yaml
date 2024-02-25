@@ -1,0 +1,10 @@
+batch_size: 64
+buffer_size: 1000
+epochs: 10
+val_subsplits: 5
+steps_per_epoch: 0
+validation_steps: 0
+loss: categorical_crossentropy
+optimizer: adam
+metrics: ["accuracy", "precision", "recall", "f1_score"]
+
