@@ -14,7 +14,7 @@ from src.cnn_models import (
     efficient_net_model,
     compile_model,
 )
-from src.data import DataLoader
+from src.data_load import DataLoader
 import tensorflow as tf
 
 EXPERIMENT_NAME = "Eggplant Disease Classification"
