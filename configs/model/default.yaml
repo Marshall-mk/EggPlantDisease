@@ -1,4 +1,5 @@
 name: Egg Plant Disease
+model_name: densenet121
 save_path: ../models/
 ckpt_path: ../models/
 history_path: ../evaluation/

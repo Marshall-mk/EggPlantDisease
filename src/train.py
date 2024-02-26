@@ -32,12 +32,25 @@ def main(cfg):
     train_data = data_loader.load_train_data(cfg.model.traing_data_path)
     val_data = data_loader.load_val_data(cfg.model.traing_data_path)
     test_data = data_loader.load_test_data(cfg.model.test_data_path)
+    
+    model_name = cfg.train.model_name
+    
+    if model_name == "vgg16":
+        model = vgg16_model(
+            input_shape=(cfg.model.image_size, cfg.model.image_size, 3),
+            classes=cfg.model.classes,
+        )
+    elif model_name == "efficient_net":
+        model = efficient_net_model(
+            input_shape=(cfg.model.image_size, cfg.model.image_size, 3),
+            classes=cfg.model.classes,
+        )
+    else:
+        model = dense_net_model(
+            input_shape=(cfg.model.image_size, cfg.model.image_size, 3),
+            classes=cfg.model.classes,
+        )
 
-    # Load the model
-    model = dense_net_model(
-        input_shape=(cfg.model.image_size, cfg.model.image_size, 3),
-        classes=cfg.model.classes,
-    )
     model = compile_model(
         model,
         optimizer=cfg.train.optimizer,
@@ -50,7 +63,7 @@ def main(cfg):
         monitor="val_loss", mode="min", verbose=1, patience=5
     )
     checkpointer = tf.keras.callbacks.ModelCheckpoint(
-        filepath=f"{cfg.model.ckpt_path}model.h5",
+        filepath=f"{cfg.model.ckpt_path}{model_name}_model.h5",
         save_weights_only=True,
         save_best_only=True,
     )
@@ -66,12 +79,13 @@ def main(cfg):
         )
 
         # Evaluate the model
+        model.save(f"{cfg.model.save_path}{model_name}_model.hdf5")
         test_loss, test_accuracy = model.evaluate(test_data)
         print(f"Test accuracy: {test_accuracy}")
         mlflow.log_metric("test_accuracy", test_accuracy)
         mlflow.log_metric("test_loss", test_loss)
         mlflow.log_params(cfg)
-        mlflow.log_artifact(f"{cfg.model.ckpt_path}model.h5")
+        mlflow.log_artifact(f"{cfg.model.ckpt_path}{model_name}_model.h5")
         mlflow.end_run()
 
     # Log the confusion matrix
