@@ -1,10 +1,10 @@
 name: Egg Plant Disease
 model_name: densenet121
-save_path: ../models/
-ckpt_path: ../models/
-history_path: ../evaluation/
+save_path: C:/Users/muham\Desktop/.dev/python/Projects/Egg Plant Disease/models/
+ckpt_path: C:/Users/muham\Desktop/.dev/python/Projects/Egg Plant Disease/models/
+history_path: C:/Users/muham\Desktop/.dev/python/Projects/Egg Plant Disease/evaluation/
 
-train_data_path: ../data/train/
-test_data_path: ../data/test/
+train_data_path: C:/Users/muham\Desktop/.dev/python/Projects/Egg Plant Disease/data/train/
+test_data_path: C:/Users/muham\Desktop/.dev/python/Projects/Egg Plant Disease/data/test/
 image_size: 224
 classes: 7

@@ -8,16 +8,20 @@ from sklearn.metrics import (
     confusion_matrix,
     ConfusionMatrixDisplay,
 )
-from src.cnn_models import (
+from cnn_models import (
     dense_net_model,
     vgg16_model,
     efficient_net_model,
     compile_model,
 )
-from src.data_load import DataLoader
+from data_load import DataLoader
 import tensorflow as tf
+import os
 
-EXPERIMENT_NAME = "Eggplant Disease Classification"
+
+os.environ['MLFLOW_TRACKING_USERNAME'] = 'Marshall-mk'
+os.environ['MLFLOW_TRACKING_PASSWORD'] = '293464782615cda17c4724e11052f9db2a1bfb07'
+EXPERIMENT_NAME = "Eggplant Disease Classification exp"
 EXPERIMENT_ID = mlflow.create_experiment(EXPERIMENT_NAME)
 MLFLOW_TRACKING_URI = "https://dagshub.com/Marshall-mk/EggPlantDisease.mlflow"
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
@@ -29,11 +33,11 @@ def main(cfg):
     OmegaConf.to_yaml(cfg, resolve=True)
     # Load the data
     data_loader = DataLoader()
-    train_data = data_loader.load_train_data(cfg.model.traing_data_path)
-    val_data = data_loader.load_val_data(cfg.model.traing_data_path)
+    train_data = data_loader.load_train_data(cfg.model.train_data_path)
+    val_data = data_loader.load_val_data(cfg.model.train_data_path)
     test_data = data_loader.load_test_data(cfg.model.test_data_path)
     
-    model_name = cfg.train.model_name
+    model_name = cfg.model.model_name
     
     if model_name == "vgg16":
         model = vgg16_model(
@@ -55,15 +59,14 @@ def main(cfg):
         model,
         optimizer=cfg.train.optimizer,
         loss=cfg.train.loss,
-        metrics=cfg.train.metrics,
-        weighted_metrics=None,
+        metrics=["accuracy", "precision", "recall", "f1_score"]#cfg.train.metrics,
     )
     """Model callbacks"""
     earlystopping = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss", mode="min", verbose=1, patience=5
     )
     checkpointer = tf.keras.callbacks.ModelCheckpoint(
-        filepath=f"{cfg.model.ckpt_path}{model_name}_model.h5",
+        filepath=f"{cfg.model.ckpt_path}{model_name}.weights.h5",
         save_weights_only=True,
         save_best_only=True,
     )
