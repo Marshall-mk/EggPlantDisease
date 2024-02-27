@@ -36,16 +36,3 @@ def efficient_net_model(input_shape, classes=7):
     model = models.Model(inputs, base_model)
     return model
 
-
-def compile_model(model, optimizer, loss, metrics):
-    """Compiles model"""
-    model.compile(
-        optimizer=optimizer,
-        loss=loss,
-        metrics=metrics,
-        weighted_metrics=None,
-        run_eagerly=None,
-        steps_per_execution=None,
-        jit_compile=None,
-    )
-    return model

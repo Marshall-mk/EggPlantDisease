@@ -16,11 +16,7 @@ from cnn_models import (
 )
 from data_load import DataLoader
 import tensorflow as tf
-import os
 
-
-os.environ['MLFLOW_TRACKING_USERNAME'] = 'Marshall-mk'
-os.environ['MLFLOW_TRACKING_PASSWORD'] = '293464782615cda17c4724e11052f9db2a1bfb07'
 EXPERIMENT_NAME = "Eggplant Disease Classification exp"
 EXPERIMENT_ID = mlflow.create_experiment(EXPERIMENT_NAME)
 MLFLOW_TRACKING_URI = "https://dagshub.com/Marshall-mk/EggPlantDisease.mlflow"
@@ -55,8 +51,7 @@ def main(cfg):
             classes=cfg.model.classes,
         )
 
-    model = compile_model(
-        model,
+    model.compile(
         optimizer=cfg.train.optimizer,
         loss=cfg.train.loss,
         metrics=["accuracy", "precision", "recall", "f1_score"]#cfg.train.metrics,

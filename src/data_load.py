@@ -9,12 +9,12 @@ class DataLoader():
     
     def image_equalization(image):
         """Equalizes the histogram of an image"""
-        R, G, B = cv2.split(image)
-        output1_R = cv2.equalizeHist(R)
-        output1_G = cv2.equalizeHist(G)
-        output1_B = cv2.equalizeHist(B)
-        equ = cv2.merge((output1_R, output1_G, output1_B))
-        return equ
+        # R, G, B = cv2.split(image)
+        # output1_R = cv2.equalizeHist(R)
+        # output1_G = cv2.equalizeHist(G)
+        # output1_B = cv2.equalizeHist(B)
+        # equ = cv2.merge((output1_R, output1_G, output1_B))
+        return image
 
     def load_train_data(self, path):
         """Loads dataset from path"""
