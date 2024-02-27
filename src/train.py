@@ -12,7 +12,6 @@ from cnn_models import (
     dense_net_model,
     vgg16_model,
     efficient_net_model,
-    compile_model,
 )
 from data_load import DataLoader
 import tensorflow as tf
