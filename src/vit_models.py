@@ -1,16 +1,12 @@
-import os
-import sys
-import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from textwrap import wrap
-
 import tensorflow as tf
-import tensorflow_addons as tfa
 import keras
-from keras import datasets, layers, models
+from keras import layers
+from keras import ops
+import matplotlib.pyplot as plt
 
-input_shape = (IMG_HEIGHT, IMG_WIDTH, IMG_COLOR)
+## Configure the hyperparameters
+input_shape = (224, 224, 3)
 num_classes = 7
 patch_size = (2, 2)  # 2-by-2 sized patches
 dropout_rate = 0.03  # Dropout rate
@@ -32,27 +28,59 @@ validation_split = 0.1
 weight_decay = 0.0001
 label_smoothing = 0.1
 
+## Helper functions
+"""We create two helper functions to help us get a sequence 
+of patches from the image, merge patches, and apply dropout."""
+def window_partition(x, window_size):
+    _, height, width, channels = x.shape
+    patch_num_y = height // window_size
+    patch_num_x = width // window_size
+    x = ops.reshape(
+        x,
+        (
+            -1,
+            patch_num_y,
+            window_size,
+            patch_num_x,
+            window_size,
+            channels,
+        ),
+    )
+    x = ops.transpose(x, (0, 1, 3, 2, 4, 5))
+    windows = ops.reshape(x, (-1, window_size, window_size, channels))
+    return windows
 
-class DropPath(layers.Layer):
-    def __init__(self, drop_prob=None, **kwargs):
-        super(DropPath, self).__init__(**kwargs)
-        self.drop_prob = drop_prob
 
-    def call(self, x):
-        input_shape = tf.shape(x)
-        batch_size = input_shape[0]
-        rank = x.shape.rank
-        shape = (batch_size,) + (1,) * (rank - 1)
-        random_tensor = (1 - self.drop_prob) + tf.random.uniform(shape, dtype=x.dtype)
-        path_mask = tf.floor(random_tensor)
-        output = tf.math.divide(x, 1 - self.drop_prob) * path_mask
-        return output
+def window_reverse(windows, window_size, height, width, channels):
+    patch_num_y = height // window_size
+    patch_num_x = width // window_size
+    x = ops.reshape(
+        windows,
+        (
+            -1,
+            patch_num_y,
+            patch_num_x,
+            window_size,
+            window_size,
+            channels,
+        ),
+    )
+    x = ops.transpose(x, (0, 1, 3, 2, 4, 5))
+    x = ops.reshape(x, (-1, height, width, channels))
+    return x
 
+## Window based multi-head self-attention
 class WindowAttention(layers.Layer):
     def __init__(
-        self, dim, window_size, num_heads, qkv_bias=True, dropout_rate=0.0, **kwargs
+        self,
+        dim,
+        window_size,
+        num_heads,
+        qkv_bias=True,
+        dropout_rate=0.0,
+        **kwargs,
     ):
-        super(WindowAttention, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.dim = dim
         self.window_size = window_size
         self.num_heads = num_heads
@@ -61,13 +89,12 @@ class WindowAttention(layers.Layer):
         self.dropout = layers.Dropout(dropout_rate)
         self.proj = layers.Dense(dim)
 
-    def build(self, input_shape):
         num_window_elements = (2 * self.window_size[0] - 1) * (
             2 * self.window_size[1] - 1
         )
         self.relative_position_bias_table = self.add_weight(
             shape=(num_window_elements, self.num_heads),
-            initializer=tf.initializers.Zeros(),
+            initializer=keras.initializers.Zeros(),
             trainable=True,
         )
         coords_h = np.arange(self.window_size[0])
@@ -82,128 +109,58 @@ class WindowAttention(layers.Layer):
         relative_coords[:, :, 0] *= 2 * self.window_size[1] - 1
         relative_position_index = relative_coords.sum(-1)
 
-        self.relative_position_index = tf.Variable(
-            initial_value=tf.convert_to_tensor(relative_position_index), trainable=False
+        self.relative_position_index = keras.Variable(
+            initializer=relative_position_index,
+            shape=relative_position_index.shape,
+            dtype="int",
+            trainable=False,
         )
 
     def call(self, x, mask=None):
         _, size, channels = x.shape
         head_dim = channels // self.num_heads
         x_qkv = self.qkv(x)
-        x_qkv = tf.reshape(x_qkv, shape=(-1, size, 3, self.num_heads, head_dim))
-        x_qkv = tf.transpose(x_qkv, perm=(2, 0, 3, 1, 4))
+        x_qkv = ops.reshape(x_qkv, (-1, size, 3, self.num_heads, head_dim))
+        x_qkv = ops.transpose(x_qkv, (2, 0, 3, 1, 4))
         q, k, v = x_qkv[0], x_qkv[1], x_qkv[2]
         q = q * self.scale
-        k = tf.transpose(k, perm=(0, 1, 3, 2))
+        k = ops.transpose(k, (0, 1, 3, 2))
         attn = q @ k
 
         num_window_elements = self.window_size[0] * self.window_size[1]
-        relative_position_index_flat = tf.reshape(
-            self.relative_position_index, shape=(-1,)
+        relative_position_index_flat = ops.reshape(self.relative_position_index, (-1,))
+        relative_position_bias = ops.take(
+            self.relative_position_bias_table,
+            relative_position_index_flat,
+            axis=0,
         )
-        relative_position_bias = tf.gather(
-            self.relative_position_bias_table, relative_position_index_flat
+        relative_position_bias = ops.reshape(
+            relative_position_bias,
+            (num_window_elements, num_window_elements, -1),
         )
-        relative_position_bias = tf.reshape(
-            relative_position_bias, shape=(num_window_elements, num_window_elements, -1)
-        )
-        relative_position_bias = tf.transpose(relative_position_bias, perm=(2, 0, 1))
-        attn = attn + tf.expand_dims(relative_position_bias, axis=0)
+        relative_position_bias = ops.transpose(relative_position_bias, (2, 0, 1))
+        attn = attn + ops.expand_dims(relative_position_bias, axis=0)
 
         if mask is not None:
-            nW = mask.get_shape()[0]
-            mask_float = tf.cast(
-                tf.expand_dims(tf.expand_dims(mask, axis=1), axis=0), tf.float32
+            nW = mask.shape[0]
+            mask_float = ops.cast(
+                ops.expand_dims(ops.expand_dims(mask, axis=1), axis=0),
+                "float32",
             )
-            attn = (
-                tf.reshape(attn, shape=(-1, nW, self.num_heads, size, size))
-                + mask_float
-            )
-            attn = tf.reshape(attn, shape=(-1, self.num_heads, size, size))
+            attn = ops.reshape(attn, (-1, nW, self.num_heads, size, size)) + mask_float
+            attn = ops.reshape(attn, (-1, self.num_heads, size, size))
             attn = keras.activations.softmax(attn, axis=-1)
         else:
             attn = keras.activations.softmax(attn, axis=-1)
         attn = self.dropout(attn)
 
         x_qkv = attn @ v
-        x_qkv = tf.transpose(x_qkv, perm=(0, 2, 1, 3))
-        x_qkv = tf.reshape(x_qkv, shape=(-1, size, channels))
+        x_qkv = ops.transpose(x_qkv, (0, 2, 1, 3))
+        x_qkv = ops.reshape(x_qkv, (-1, size, channels))
         x_qkv = self.proj(x_qkv)
         x_qkv = self.dropout(x_qkv)
         return x_qkv
-
-def window_partition(x, window_size):
-    _, height, width, channels = x.shape
-    patch_num_y = height // window_size
-    patch_num_x = width // window_size
-    x = tf.reshape(
-        x, shape=(-1, patch_num_y, window_size, patch_num_x, window_size, channels)
-    )
-    x = tf.transpose(x, (0, 1, 3, 2, 4, 5))
-    windows = tf.reshape(x, shape=(-1, window_size, window_size, channels))
-    return windows
-
-
-def window_reverse(windows, window_size, height, width, channels):
-    patch_num_y = height // window_size
-    patch_num_x = width // window_size
-    x = tf.reshape(
-        windows,
-        shape=(-1, patch_num_y, patch_num_x, window_size, window_size, channels),
-    )
-    x = tf.transpose(x, perm=(0, 1, 3, 2, 4, 5))
-    x = tf.reshape(x, shape=(-1, height, width, channels))
-    return x
-
-class PatchExtract(layers.Layer):
-    def __init__(self, patch_size, **kwargs):
-        super(PatchExtract, self).__init__(**kwargs)
-        self.patch_size_x = patch_size[0]
-        self.patch_size_y = patch_size[0]
-
-    def call(self, images):
-        batch_size = tf.shape(images)[0]
-        patches = tf.image.extract_patches(
-            images=images,
-            sizes=(1, self.patch_size_x, self.patch_size_y, 1),
-            strides=(1, self.patch_size_x, self.patch_size_y, 1),
-            rates=(1, 1, 1, 1),
-            padding="VALID",
-        )
-        patch_dim = patches.shape[-1]
-        patch_num = patches.shape[1]
-        return tf.reshape(patches, (batch_size, patch_num * patch_num, patch_dim))
-class PatchEmbedding(layers.Layer):
-    def __init__(self, num_patch, embed_dim, **kwargs):
-        super(PatchEmbedding, self).__init__(**kwargs)
-        self.num_patch = num_patch
-        self.proj = layers.Dense(embed_dim)
-        self.pos_embed = layers.Embedding(input_dim=num_patch, output_dim=embed_dim)
-
-    def call(self, patch):
-        pos = tf.range(start=0, limit=self.num_patch, delta=1)
-        return self.proj(patch) + self.pos_embed(pos)
-
-class PatchMerging(tf.keras.layers.Layer):
-    def __init__(self, num_patch, embed_dim):
-        super(PatchMerging, self).__init__()
-        self.num_patch = num_patch
-        self.embed_dim = embed_dim
-        self.linear_trans = layers.Dense(2 * embed_dim, use_bias=False)
-
-    def call(self, x):
-        height, width = self.num_patch
-        _, _, C = x.get_shape().as_list()
-        x = tf.reshape(x, shape=(-1, height, width, C))
-        x0 = x[:, 0::2, 0::2, :]
-        x1 = x[:, 1::2, 0::2, :]
-        x2 = x[:, 0::2, 1::2, :]
-        x3 = x[:, 1::2, 1::2, :]
-        x = tf.concat((x0, x1, x2, x3), axis=-1)
-        x = tf.reshape(x, shape=(-1, (height // 2) * (width // 2), 4 * C))
-        return self.linear_trans(x)
-
-
+## The complete Swin Transformer model
 class SwinTransformer(layers.Layer):
     def __init__(
         self,
@@ -217,7 +174,7 @@ class SwinTransformer(layers.Layer):
         dropout_rate=0.0,
         **kwargs,
     ):
-        super(SwinTransformer, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.dim = dim  # number of input dimensions
         self.num_patch = num_patch  # number of embedded patches
@@ -234,7 +191,7 @@ class SwinTransformer(layers.Layer):
             qkv_bias=qkv_bias,
             dropout_rate=dropout_rate,
         )
-        self.drop_path = DropPath(dropout_rate)
+        self.drop_path = layers.Dropout(dropout_rate)
         self.norm2 = layers.LayerNormalization(epsilon=1e-5)
 
         self.mlp = keras.Sequential(
@@ -272,54 +229,60 @@ class SwinTransformer(layers.Layer):
                 for w in w_slices:
                     mask_array[:, h, w, :] = count
                     count += 1
-            mask_array = tf.convert_to_tensor(mask_array)
+            mask_array = ops.convert_to_tensor(mask_array)
 
             # mask array to windows
             mask_windows = window_partition(mask_array, self.window_size)
-            mask_windows = tf.reshape(
-                mask_windows, shape=[-1, self.window_size * self.window_size]
+            mask_windows = ops.reshape(
+                mask_windows, [-1, self.window_size * self.window_size]
             )
-            attn_mask = tf.expand_dims(mask_windows, axis=1) - tf.expand_dims(
+            attn_mask = ops.expand_dims(mask_windows, axis=1) - ops.expand_dims(
                 mask_windows, axis=2
             )
-            attn_mask = tf.where(attn_mask != 0, -100.0, attn_mask)
-            attn_mask = tf.where(attn_mask == 0, 0.0, attn_mask)
-            self.attn_mask = tf.Variable(initial_value=attn_mask, trainable=False)
+            attn_mask = ops.where(attn_mask != 0, -100.0, attn_mask)
+            attn_mask = ops.where(attn_mask == 0, 0.0, attn_mask)
+            self.attn_mask = keras.Variable(
+                initializer=attn_mask,
+                shape=attn_mask.shape,
+                dtype=attn_mask.dtype,
+                trainable=False,
+            )
 
-    def call(self, x):
+    def call(self, x, training=False):
         height, width = self.num_patch
         _, num_patches_before, channels = x.shape
         x_skip = x
         x = self.norm1(x)
-        x = tf.reshape(x, shape=(-1, height, width, channels))
+        x = ops.reshape(x, (-1, height, width, channels))
         if self.shift_size > 0:
-            shifted_x = tf.roll(
+            shifted_x = ops.roll(
                 x, shift=[-self.shift_size, -self.shift_size], axis=[1, 2]
             )
         else:
             shifted_x = x
 
         x_windows = window_partition(shifted_x, self.window_size)
-        x_windows = tf.reshape(
-            x_windows, shape=(-1, self.window_size * self.window_size, channels)
+        x_windows = ops.reshape(
+            x_windows, (-1, self.window_size * self.window_size, channels)
         )
         attn_windows = self.attn(x_windows, mask=self.attn_mask)
 
-        attn_windows = tf.reshape(
-            attn_windows, shape=(-1, self.window_size, self.window_size, channels)
+        attn_windows = ops.reshape(
+            attn_windows,
+            (-1, self.window_size, self.window_size, channels),
         )
         shifted_x = window_reverse(
             attn_windows, self.window_size, height, width, channels
         )
         if self.shift_size > 0:
-            x = tf.roll(
+            x = ops.roll(
                 shifted_x, shift=[self.shift_size, self.shift_size], axis=[1, 2]
             )
         else:
             x = shifted_x
 
-        x = tf.reshape(x, shape=(-1, height * width, channels))
-        x = self.drop_path(x)
+        x = ops.reshape(x, (-1, height * width, channels))
+        x = self.drop_path(x, training=training)
         x = x_skip + x
         x_skip = x
         x = self.norm2(x)
@@ -327,35 +290,112 @@ class SwinTransformer(layers.Layer):
         x = self.drop_path(x)
         x = x_skip + x
         return x
-    
 
-def swin_transformer_model(input_shape, num_classes):
-    input = layers.Input(input_shape)
-    x = layers.RandomCrop(image_dimension, image_dimension)(input)
-    x = layers.RandomFlip("horizontal")(x)
-    x = PatchExtract(patch_size)(x)
-    x = PatchEmbedding(num_patch_x * num_patch_y, embed_dim)(x)
-    x = SwinTransformer(
-        dim=embed_dim,
-        num_patch=(num_patch_x, num_patch_y),
-        num_heads=num_heads,
-        window_size=window_size,
-        shift_size=0,
-        num_mlp=num_mlp,
-        qkv_bias=qkv_bias,
-        dropout_rate=dropout_rate,
-    )(x)
-    x = SwinTransformer(
-        dim=embed_dim,
-        num_patch=(num_patch_x, num_patch_y),
-        num_heads=num_heads,
-        window_size=window_size,
-        shift_size=shift_size,
-        num_mlp=num_mlp,
-        qkv_bias=qkv_bias,
-        dropout_rate=dropout_rate,)(x)
-    x = PatchMerging((num_patch_x, num_patch_y), embed_dim=embed_dim)(x)
-    x = layers.GlobalAveragePooling1D()(x)
-    output = layers.Dense(num_classes, activation="softmax")(x)
-    model = models.Model(input, output)
-    return model
+
+## Model training and evaluation
+# Extract and embed patches
+# Using tf ops since it is only used in tf.data.
+def patch_extract(images):
+    batch_size = tf.shape(images)[0]
+    patches = tf.image.extract_patches(
+        images=images,
+        sizes=(1, patch_size[0], patch_size[1], 1),
+        strides=(1, patch_size[0], patch_size[1], 1),
+        rates=(1, 1, 1, 1),
+        padding="VALID",
+    )
+    patch_dim = patches.shape[-1]
+    patch_num = patches.shape[1]
+    return tf.reshape(patches, (batch_size, patch_num * patch_num, patch_dim))
+
+
+class PatchEmbedding(layers.Layer):
+    def __init__(self, num_patch, embed_dim, **kwargs):
+        super().__init__(**kwargs)
+        self.num_patch = num_patch
+        self.proj = layers.Dense(embed_dim)
+        self.pos_embed = layers.Embedding(input_dim=num_patch, output_dim=embed_dim)
+
+    def call(self, patch):
+        pos = ops.arange(start=0, stop=self.num_patch)
+        return self.proj(patch) + self.pos_embed(pos)
+
+
+class PatchMerging(keras.layers.Layer):
+    def __init__(self, num_patch, embed_dim):
+        super().__init__()
+        self.num_patch = num_patch
+        self.embed_dim = embed_dim
+        self.linear_trans = layers.Dense(2 * embed_dim, use_bias=False)
+
+    def call(self, x):
+        height, width = self.num_patch
+        _, _, C = x.shape
+        x = ops.reshape(x, (-1, height, width, C))
+        x0 = x[:, 0::2, 0::2, :]
+        x1 = x[:, 1::2, 0::2, :]
+        x2 = x[:, 0::2, 1::2, :]
+        x3 = x[:, 1::2, 1::2, :]
+        x = ops.concatenate((x0, x1, x2, x3), axis=-1)
+        x = ops.reshape(x, (-1, (height // 2) * (width // 2), 4 * C))
+        return self.linear_trans(x)
+############################################################################################################
+## Build the model 
+# input = layers.Input(shape=(256, 12))
+# x = PatchEmbedding(num_patch_x * num_patch_y, embed_dim)(input)
+# x = SwinTransformer(
+#     dim=embed_dim,
+#     num_patch=(num_patch_x, num_patch_y),
+#     num_heads=num_heads,
+#     window_size=window_size,
+#     shift_size=0,
+#     num_mlp=num_mlp,
+#     qkv_bias=qkv_bias,
+#     dropout_rate=dropout_rate,
+# )(x)
+# x = SwinTransformer(
+#     dim=embed_dim,
+#     num_patch=(num_patch_x, num_patch_y),
+#     num_heads=num_heads,
+#     window_size=window_size,
+#     shift_size=shift_size,
+#     num_mlp=num_mlp,
+#     qkv_bias=qkv_bias,
+#     dropout_rate=dropout_rate,
+# )(x)
+# x = PatchMerging((num_patch_x, num_patch_y), embed_dim=embed_dim)(x)
+# x = layers.GlobalAveragePooling1D()(x)
+# output = layers.Dense(num_classes, activation="softmax")(x)
+
+# model = keras.Model(input, output)
+# model.compile(
+#     loss=keras.losses.CategoricalCrossentropy(label_smoothing=label_smoothing),
+#     optimizer=keras.optimizers.AdamW(
+#         learning_rate=learning_rate, weight_decay=weight_decay
+#     ),
+#     metrics=[
+#         keras.metrics.CategoricalAccuracy(name="accuracy"),
+#         keras.metrics.TopKCategoricalAccuracy(5, name="top-5-accuracy"),
+#     ],
+# )
+
+# history = model.fit(
+#     dataset,
+#     batch_size=batch_size,
+#     epochs=num_epochs,
+#     validation_data=dataset_val,
+# )
+
+# plt.plot(history.history["loss"], label="train_loss")
+# plt.plot(history.history["val_loss"], label="val_loss")
+# plt.xlabel("Epochs")
+# plt.ylabel("Loss")
+# plt.title("Train and Validation Losses Over Epochs", fontsize=14)
+# plt.legend()
+# plt.grid()
+# plt.show()
+
+# loss, accuracy, top_5_accuracy = model.evaluate(dataset_test)
+# print(f"Test loss: {round(loss, 2)}")
+# print(f"Test accuracy: {round(accuracy * 100, 2)}%")
+# print(f"Test top 5 accuracy: {round(top_5_accuracy * 100, 2)}%")
