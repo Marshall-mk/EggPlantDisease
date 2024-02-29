@@ -709,64 +709,64 @@ class GCViT(keras.Model):
 
 ###################################
 ## Train
-config = {
-    "window_size": (7, 7, 14, 7),
-    "embed_dim": 64,
-    "depths": (2, 2, 6, 2),
-    "num_heads": (2, 4, 8, 16),
-    "mlp_ratio": 3.0,
-    "path_drop": 0.2,
-}
-ckpt_link = (
-    "https://github.com/awsaf49/gcvit-tf/releases/download/v1.1.6/gcvitxxtiny.keras"
-)
+# config = {
+#     "window_size": (7, 7, 14, 7),
+#     "embed_dim": 64,
+#     "depths": (2, 2, 6, 2),
+#     "num_heads": (2, 4, 8, 16),
+#     "mlp_ratio": 3.0,
+#     "path_drop": 0.2,
+# }
+# ckpt_link = (
+#     "https://github.com/awsaf49/gcvit-tf/releases/download/v1.1.6/gcvitxxtiny.keras"
+# )
 
-# Build Model
-model = GCViT(**config)
-inp = ops.array(np.random.uniform(size=(1, 224, 224, 3)))
-out = model(inp)
+# # Build Model
+# model = GCViT(**config)
+# inp = ops.array(np.random.uniform(size=(1, 224, 224, 3)))
+# out = model(inp)
 
-# Load Weights
-ckpt_path = keras.utils.get_file(ckpt_link.split("/")[-1], ckpt_link)
-model.load_weights(ckpt_path)
+# # Load Weights
+# ckpt_path = keras.utils.get_file(ckpt_link.split("/")[-1], ckpt_link)
+# model.load_weights(ckpt_path)
 
-# Summary
-model.summary((224, 224, 3))
+# # Summary
+# model.summary((224, 224, 3))
 
-# Model
-IMAGE_SIZE = (224, 224)
+# # Model
+# IMAGE_SIZE = (224, 224)
 
-# Hyper Params
-BATCH_SIZE = 32
-EPOCHS = 5
+# # Hyper Params
+# BATCH_SIZE = 32
+# EPOCHS = 5
 
-# Dataset
-CLASSES = [
-    "dandelion",
-    "daisy",
-    "tulips",
-    "sunflowers",
-    "roses",
-]  # don't change the order
+# # Dataset
+# CLASSES = [
+#     "dandelion",
+#     "daisy",
+#     "tulips",
+#     "sunflowers",
+#     "roses",
+# ]  # don't change the order
 
-# Other constants
-MEAN = 255 * np.array([0.485, 0.456, 0.406], dtype="float32")  # imagenet mean
-STD = 255 * np.array([0.229, 0.224, 0.225], dtype="float32")  # imagenet std
-AUTO = tf.data.AUTOTUNE
+# # Other constants
+# MEAN = 255 * np.array([0.485, 0.456, 0.406], dtype="float32")  # imagenet mean
+# STD = 255 * np.array([0.229, 0.224, 0.225], dtype="float32")  # imagenet std
+# AUTO = tf.data.AUTOTUNE
 
-# Re-Build Model
-model = GCViT(**config, num_classes=7)
-inp = ops.array(np.random.uniform(size=(1, 224, 224, 3)))
-out = model(inp)
+# # Re-Build Model
+# model = GCViT(**config, num_classes=7)
+# inp = ops.array(np.random.uniform(size=(1, 224, 224, 3)))
+# out = model(inp)
 
-# Load Weights
-ckpt_path = keras.utils.get_file(ckpt_link.split("/")[-1], ckpt_link)
-model.load_weights(ckpt_path, skip_mismatch=True)
+# # Load Weights
+# ckpt_path = keras.utils.get_file(ckpt_link.split("/")[-1], ckpt_link)
+# model.load_weights(ckpt_path, skip_mismatch=True)
 
-model.compile(
-    loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
-)
+# model.compile(
+#     loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"]
+# )
 
-history = model.fit(
-    train_dataset, validation_data=val_dataset, epochs=EPOCHS, verbose=1
-)
+# history = model.fit(
+#     train_dataset, validation_data=val_dataset, epochs=EPOCHS, verbose=1
+# )
