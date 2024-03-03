@@ -10,6 +10,7 @@ from skimage.data import chelsea
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 ## Unit Blocks
 class SqueezeAndExcitation(layers.Layer):
     """Squeeze and excitation block.
@@ -141,6 +142,7 @@ class MLP(layers.Layer):
         x = self.drop2(x)
         return x
 
+
 ## PatchEmbed or Stem
 class PatchEmbed(layers.Layer):
     """Patch embedding block.
@@ -163,6 +165,7 @@ class PatchEmbed(layers.Layer):
         x = self.proj(x)
         x = self.conv_down(x)
         return x
+
 
 ## Global Token Gen.
 class FeatureExtraction(layers.Layer):
@@ -227,6 +230,7 @@ class GlobalQueryGenerator(layers.Layer):
         for layer in self.to_q_global:
             x = layer(x)
         return x
+
 
 ## Attention
 class WindowAttention(layers.Layer):
@@ -354,6 +358,7 @@ class WindowAttention(layers.Layer):
         x = ops.reshape(x, [B_, N, C])
         x = self.proj_drop(self.proj(x))
         return x
+
 
 ## Block
 class Block(layers.Layer):
@@ -517,6 +522,7 @@ class Block(layers.Layer):
         x = ops.reshape(x, [-1, H, W, C])
         return x
 
+
 ## Level
 class Level(layers.Layer):
     """GCViT level.
@@ -603,6 +609,7 @@ class Level(layers.Layer):
         if self.downsample:
             x = self.down(x)  # shape: (B, H//2, W//2, 2*C)
         return x
+
 
 ## GCViT
 class GCViT(keras.Model):
@@ -706,6 +713,7 @@ class GCViT(keras.Model):
 
     def summary(self, input_shape=(224, 224, 3)):
         return self.build_graph(input_shape).summary()
+
 
 ###################################
 ## Train

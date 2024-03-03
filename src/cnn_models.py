@@ -3,35 +3,65 @@ from keras.applications import EfficientNetB0, DenseNet121
 from keras.applications.densenet import DenseNet121
 from keras.applications.vgg16 import VGG16
 
+
 def dense_net_model(input_shape, classes=7):
     """Finetune DenseNet model"""
-    model = DenseNet121(
-        input_shape=input_shape, include_top=True, weights='imagenet', classes=classes
+    base_model = DenseNet121(
+        input_shape=input_shape, include_top=False, weights="imagenet", classes=classes
     )
     # train only the top layers
-    for layer in model.layers[:-5]:
+    for layer in base_model.layers[:-5]:
         layer.trainable = False
-    return model
+    x = base_model.output
+
+    # add a global spatial average pooling layer
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dense(256, activation="relu")(x)
+    x = layers.Dropout(0.5)(x)
+
+    # and a logistic layer
+    predictions = layers.Dense(classes, activation="softmax")(x)
+    return models.Model(base_model.input, predictions)
+
 
 def vgg16_model(input_shape, classes=7):
     """Finetune VGG16 model"""
-    model = VGG16(
-        input_shape=input_shape, include_top=True, weights='imagenet', classes=classes
+    base_model = VGG16(
+        input_shape=input_shape, include_top=False, weights="imagenet", classes=classes
     )
     # train only the top layers
-    for layer in model.layers[:-5]:
+    for layer in base_model.layers[:-5]:
         layer.trainable = False
-    return model
+    x = base_model.output
+
+    # add a global spatial average pooling layer
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dense(256, activation="relu")(x)
+    x = layers.Dropout(0.5)(x)
+
+    # and a logistic layer
+    predictions = layers.Dense(classes, activation="softmax")(x)
+    return models.Model(base_model.input, predictions)
+
 
 def efficient_net_model(input_shape, classes=7):
     """Finetune EfficientNet model"""
-    model = EfficientNetB0(
-        input_shape=input_shape, include_top=True, weights='imagenet', classes=classes
+    base_model = EfficientNetB0(
+        input_shape=input_shape, include_top=False, weights="imagenet", classes=classes
     )
     # train only the top layers
-    for layer in model.layers[:-5]:
+    for layer in base_model.layers[:-5]:
         layer.trainable = False
-    return model
+    x = base_model.output
+
+    # add a global spatial average pooling layer
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dense(256, activation="relu")(x)
+    x = layers.Dropout(0.5)(x)
+
+    # and a logistic layer
+    predictions = layers.Dense(classes, activation="softmax")(x)
+    return models.Model(base_model.input, predictions)
 
 
 def dense_net_model_FT(input_shape, classes=7):

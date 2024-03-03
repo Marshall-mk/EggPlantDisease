@@ -13,7 +13,9 @@ dropout_rate = 0.03  # Dropout rate
 num_heads = 8  # Attention heads
 embed_dim = 64  # Embedding dimension
 num_mlp = 256  # MLP layer size
-qkv_bias = True  # Convert embedded patches to query, key, and values with a learnable additive value
+qkv_bias = (
+    True
+)  # Convert embedded patches to query, key, and values with a learnable additive value
 window_size = 2  # Size of attention window
 shift_size = 1  # Size of shifting window
 image_dimension = input_shape[0]  # Initial image size
@@ -31,6 +33,8 @@ label_smoothing = 0.1
 ## Helper functions
 """We create two helper functions to help us get a sequence 
 of patches from the image, merge patches, and apply dropout."""
+
+
 def window_partition(x, window_size):
     _, height, width, channels = x.shape
     patch_num_y = height // window_size
@@ -68,6 +72,7 @@ def window_reverse(windows, window_size, height, width, channels):
     x = ops.transpose(x, (0, 1, 3, 2, 4, 5))
     x = ops.reshape(x, (-1, height, width, channels))
     return x
+
 
 ## Window based multi-head self-attention
 class WindowAttention(layers.Layer):
@@ -160,6 +165,8 @@ class WindowAttention(layers.Layer):
         x_qkv = self.proj(x_qkv)
         x_qkv = self.dropout(x_qkv)
         return x_qkv
+
+
 ## The complete Swin Transformer model
 class SwinTransformer(layers.Layer):
     def __init__(
@@ -339,8 +346,10 @@ class PatchMerging(keras.layers.Layer):
         x = ops.concatenate((x0, x1, x2, x3), axis=-1)
         x = ops.reshape(x, (-1, (height // 2) * (width // 2), 4 * C))
         return self.linear_trans(x)
+
+
 ############################################################################################################
-## Build the model 
+## Build the model
 # input = layers.Input(shape=(256, 12))
 # x = PatchEmbedding(num_patch_x * num_patch_y, embed_dim)(input)
 # x = SwinTransformer(
