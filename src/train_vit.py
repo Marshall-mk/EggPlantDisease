@@ -107,6 +107,7 @@ def main(cfg):
             epochs=num_epochs,
             validation_data=val_data,
         )
+        model.save(f"{cfg.model.save_path}{model_name}_model.keras")
         loss, accuracy, top_5_accuracy, precision, recall, f1_score = model.evaluate(
             test_data
         )
@@ -128,7 +129,7 @@ def main(cfg):
         plt.xticks(rotation=90)
         plt.title("Confusion Matrix")
         plt.savefig(f"{cfg.model.history_path}{model_name}_confusion_matrix.png")
-        model.save(f"{cfg.model.save_path}{model_name}_model.keras")
+
         # Log the classification report
         class_names = [k for k, v in test_data.class_indices.items()]
         report = classification_report(
@@ -213,6 +214,7 @@ def main(cfg):
             epochs=EPOCHS,
             verbose=1,
         )
+        model.save(f"{cfg.model.save_path}{model_name}_model.keras")
         loss, accuracy, precision, recall, f1_score = model.evaluate(test_data)
         print(f"Test loss: {round(loss, 2)}")
         print(f"Test accuracy: {round(accuracy * 100, 2)}%")
@@ -231,7 +233,7 @@ def main(cfg):
         plt.xticks(rotation=90)
         plt.title("Confusion Matrix")
         plt.savefig(f"{cfg.model.history_path}{model_name}_confusion_matrix.png")
-        model.save(f"{cfg.model.save_path}{model_name}_model.keras")
+
         # Log the classification report
         class_names = [k for k, v in test_data.class_indices.items()]
         report = classification_report(
@@ -288,5 +290,3 @@ def main(cfg):
             dpi=300,
             bbox_inches="tight",
         )
-if __name__ == "__main__":
-    main()
