@@ -14,7 +14,7 @@ from sklearn.metrics import (
 
 from data_load import DataLoader
 from gcvit_model import GCViT
-from vit_models import PatchEmbedding, SwinTransformer, PatchMerging, patch_extract
+from swin_model import PatchEmbedding, SwinTransformer, PatchMerging, patch_extract
 
 
 @hydra.main(config_path="../configs", config_name="configs", version_base="1.2")
@@ -288,3 +288,5 @@ def main(cfg):
             dpi=300,
             bbox_inches="tight",
         )
+if __name__ == "__main__":
+    main()
