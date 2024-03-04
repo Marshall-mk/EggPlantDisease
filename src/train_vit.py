@@ -128,7 +128,7 @@ def main(cfg):
         plt.xticks(rotation=90)
         plt.title("Confusion Matrix")
         plt.savefig(f"{cfg.model.history_path}{model_name}_confusion_matrix.png")
-
+        model.save(f"{cfg.model.save_path}{model_name}_model.keras")
         # Log the classification report
         class_names = [k for k, v in test_data.class_indices.items()]
         report = classification_report(
@@ -231,7 +231,7 @@ def main(cfg):
         plt.xticks(rotation=90)
         plt.title("Confusion Matrix")
         plt.savefig(f"{cfg.model.history_path}{model_name}_confusion_matrix.png")
-
+        model.save(f"{cfg.model.save_path}{model_name}_model.keras")
         # Log the classification report
         class_names = [k for k, v in test_data.class_indices.items()]
         report = classification_report(
