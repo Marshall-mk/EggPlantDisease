@@ -44,9 +44,6 @@ def main(cfg):
         num_patch_y = input_shape[1] // patch_size[1]
 
         learning_rate = 1e-3
-        batch_size = 16
-        num_epochs = 40
-        validation_split = 0.1
         weight_decay = 0.0001
         label_smoothing = 0.1
 
@@ -103,8 +100,8 @@ def main(cfg):
         )
         history = model.fit(
             train_data,
-            batch_size=batch_size,
-            epochs=num_epochs,
+            batch_size=cfg.train.batch_size,
+            epochs=cfg.train.epochs,
             validation_data=val_data,
         )
         model.save(f"{cfg.model.save_path}{model_name}_model.keras")
@@ -161,31 +158,7 @@ def main(cfg):
         ) as f:
             f.write(json_report)
 
-        plt.plot(history.history["loss"], label="train_loss")
-        plt.plot(history.history["val_loss"], label="val_loss")
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.title("Train and Validation Losses Over Epochs", fontsize=14)
-        plt.legend()
-        plt.grid()
-        plt.savefig(
-            f"{cfg.model.history_path}{cfg.model.model_name}_loss.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
-
-        plt.plot(history.history["accuracy"], label="train_accuracy")
-        plt.plot(history.history["val_accuracy"], label="val_accuracy")
-        plt.xlabel("Epochs")
-        plt.ylabel("Accuravy")
-        plt.title("Train and Validation Accuracies Over Epochs", fontsize=14)
-        plt.legend()
-        plt.grid()
-        plt.savefig(
-            f"{cfg.model.history_path}{cfg.model.model_name}_accuracy.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
+        _model_history(history, cfg)
 
     elif model_name == "gcvit":
         # Model Params
@@ -197,21 +170,19 @@ def main(cfg):
             "mlp_ratio": 3.0,
             "path_drop": 0.2,
         }
-        BATCH_SIZE = 16
-        EPOCHS = 50
 
         # Re-Build Model
         model = GCViT(**config, num_classes=7)
         model.compile(
-            loss="categorical_crossentropy",
-            optimizer="adam",
+            loss=cfg.train.loss,
+            optimizer=cfg.train.optimizer,
             metrics=["accuracy", "precision", "recall", "f1_score"],
         )
         history = model.fit(
             train_data,
-            batch_size=BATCH_SIZE,
+            batch_size=cfg.train.batch_size,
             validation_data=val_data,
-            epochs=EPOCHS,
+            epochs=cfg.train.epochs,
             verbose=1,
         )
         model.save(f"{cfg.model.save_path}{model_name}_model.keras")
@@ -265,28 +236,81 @@ def main(cfg):
         ) as f:
             f.write(json_report)
 
-        plt.plot(history.history["loss"], label="train_loss")
-        plt.plot(history.history["val_loss"], label="val_loss")
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.title("Train and Validation Losses Over Epochs", fontsize=14)
-        plt.legend()
-        plt.grid()
-        plt.savefig(
-            f"{cfg.model.history_path}{cfg.model.model_name}_loss.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
+        _model_history(history, cfg)
 
-        plt.plot(history.history["accuracy"], label="train_accuracy")
-        plt.plot(history.history["val_accuracy"], label="val_accuracy")
-        plt.xlabel("Epochs")
-        plt.ylabel("Accuravy")
-        plt.title("Train and Validation Accuracies Over Epochs", fontsize=14)
-        plt.legend()
-        plt.grid()
-        plt.savefig(
-            f"{cfg.model.history_path}{cfg.model.model_name}_accuracy.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
+def _model_history(model_info, cfg):
+    accuracy = model_info.history["accuracy"]
+    val_accuracy = model_info.history["val_accuracy"]
+    loss = model_info.history["loss"]
+    val_loss = model_info.history["val_loss"]
+    precision = model_info.history["precision"]
+    val_precision = model_info.history["val_precision"]
+    recall = model_info.history["recall"]
+    val_recall = model_info.history["val_recall"]
+    f1_score = model_info.history["f1_score"]
+    val_f1_score = model_info.history["val_f1_score"]
+    epochs = range(1, len(accuracy) + 1)
+    plt.figure(figsize=(20, 10))
+    plt.plot(epochs, accuracy, "g-", label="Training accuracy")
+    plt.plot(epochs, val_accuracy, "b", label="Validation accuracy")
+    plt.title("Training and validation accuracy")
+    plt.grid()
+    plt.savefig(
+        f"{cfg.model.history_path}{cfg.model.model_name}_accuracy.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.legend()
+
+    plt.figure(figsize=(20, 10))
+    plt.plot(epochs, loss, "g-", label="Training loss")
+    plt.plot(epochs, val_loss, "b", label="Validation loss")
+    plt.title("Training and validation loss")
+    plt.legend()
+    plt.grid()
+    plt.savefig(
+        f"{cfg.model.history_path}{cfg.model.model_name}_loss.png",
+        bbox_inches="tight",
+        dpi=300,
+    )
+
+    plt.figure(figsize=(20, 10))
+    plt.plot(epochs, precision, "g-", label="Training precision")
+    plt.plot(epochs, val_precision, "b", label="Validation precision")
+    plt.title("Training and validation precision")
+    plt.legend()
+    plt.grid()
+    plt.savefig(
+        f"{cfg.model.history_path}{cfg.model.model_name}_precision.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.figure(figsize=(20, 10))
+    plt.plot(epochs, recall, "g-", label="Training recall")
+    plt.plot(epochs, val_recall, "b", label="Validation recall")
+    plt.title("Training and validation recall")
+    plt.legend()
+    plt.grid()
+    plt.savefig(
+        f"{cfg.model.history_path}{cfg.model.model_name}_recall.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.figure(figsize=(20, 10))
+    plt.plot(epochs, f1_score, "g-", label="Training f1_score")
+    plt.plot(epochs, val_f1_score, "b", label="Validation f1_score")
+    plt.title("Training and validation f1_score")
+    plt.legend()
+    plt.grid()
+    plt.savefig(
+        f"{cfg.model.history_path}{cfg.model.model_name}_f1_score.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+if __name__ == "__main__":
+    main()
+

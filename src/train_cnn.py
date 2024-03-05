@@ -20,8 +20,8 @@ from cnn_models import (
 from data_load import DataLoader
 import tensorflow as tf
 
-EXPERIMENT_NAME = "Eggplant Disease Classification exp"
-EXPERIMENT_ID = mlflow.create_experiment(EXPERIMENT_NAME)
+# EXPERIMENT_NAME = "Eggplant Disease Classification exp"
+# EXPERIMENT_ID = mlflow.create_experiment(EXPERIMENT_NAME)
 # MLFLOW_TRACKING_URI = "https://dagshub.com/Marshall-mk/EggPlantDisease.mlflow"
 # mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
@@ -85,37 +85,37 @@ def main(cfg):
     )
 
     # Train the model
-    with mlflow.start_run(experiment_id=EXPERIMENT_ID):
-        history = model.fit(
-            train_data,
-            validation_data=val_data,
-            epochs=cfg.train.epochs,
-            batch_size=cfg.train.batch_size,
-            callbacks=[earlystopping, checkpointer],
-        )
+    # with mlflow.start_run(experiment_id=EXPERIMENT_ID):
+    history = model.fit(
+        train_data,
+        validation_data=val_data,
+        epochs=cfg.train.epochs,
+        batch_size=cfg.train.batch_size,
+        callbacks=[earlystopping, checkpointer],
+    )
 
-        # Evaluate the model
-        model.save(f"{cfg.model.save_path}{model_name}_model.keras")
-        (
-            test_loss,
-            test_accuracy,
-            test_precision,
-            test_recall,
-            test_f1_score,
-        ) = model.evaluate(test_data)
-        print(f"Test accuracy: {test_accuracy}")
-        print(f"Test loss: {test_loss}")
-        print(f"Test precision: {test_precision}")
-        print(f"Test recall: {test_recall}")
-        print(f"Test f1_score: {test_f1_score}")
-        mlflow.log_metric("test_accuracy", test_accuracy)
-        mlflow.log_metric("test_loss", test_loss)
-        mlflow.log_metric("test_precision", test_precision)
-        mlflow.log_metric("test_recall", test_recall)
-        mlflow.log_metric("test_f1_score", test_f1_score)
-        mlflow.log_params(cfg)
-        # mlflow.log_artifact(f"{cfg.model.ckpt_path}{model_name}_model.h5")
-        mlflow.end_run()
+    # Evaluate the model
+    model.save(f"{cfg.model.save_path}{model_name}_model.keras")
+    (
+        test_loss,
+        test_accuracy,
+        test_precision,
+        test_recall,
+        test_f1_score,
+    ) = model.evaluate(test_data)
+    print(f"Test accuracy: {test_accuracy}")
+    print(f"Test loss: {test_loss}")
+    print(f"Test precision: {test_precision}")
+    print(f"Test recall: {test_recall}")
+    print(f"Test f1_score: {test_f1_score}")
+        # mlflow.log_metric("test_accuracy", test_accuracy)
+        # mlflow.log_metric("test_loss", test_loss)
+        # mlflow.log_metric("test_precision", test_precision)
+        # mlflow.log_metric("test_recall", test_recall)
+        # mlflow.log_metric("test_f1_score", test_f1_score)
+        # mlflow.log_params(cfg)
+        # # mlflow.log_artifact(f"{cfg.model.ckpt_path}{model_name}_model.h5")
+        # mlflow.end_run()
 
     # Log the confusion matrix
     y_pred = model.predict(test_data)
