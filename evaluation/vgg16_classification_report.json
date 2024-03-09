@@ -1,0 +1,37 @@
+{
+    "Healthy Leaf": {
+        "precision": 0.19,
+        "f1-score": 0.17,
+        "recall": 0.15
+    },
+    "Insect Pest Disease": {
+        "precision": 0.12,
+        "recall": 0.12,
+        "f1-score": 0.12
+    },
+    "Leaf Spot Disease": {
+        "recall": 0.2,
+        "f1-score": 0.19,
+        "precision": 0.18
+    },
+    "Mosaic Virus Disease": {
+        "recall": 0.1,
+        "f1-score": 0.1,
+        "precision": 0.09
+    },
+    "Small Leaf Disease": {
+        "precision": 0.12,
+        "recall": 0.12,
+        "f1-score": 0.12
+    },
+    "White Mold Disease": {
+        "precision": 0.09,
+        "f1-score": 0.08,
+        "recall": 0.07
+    },
+    "Wilt Disease": {
+        "recall": 0.15,
+        "precision": 0.14,
+        "f1-score": 0.14
+    }
+}

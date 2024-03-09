@@ -39,6 +39,7 @@ def main(cfg):
         window_size = 2  # Size of attention window
         shift_size = 1  # Size of shifting window
         image_dimension = input_shape[0]  # Initial image size
+         
 
         num_patch_x = input_shape[0] // patch_size[0]
         num_patch_y = input_shape[1] // patch_size[1]
@@ -105,15 +106,18 @@ def main(cfg):
             validation_data=val_data,
         )
         model.save(f"{cfg.model.save_path}{model_name}_model.keras")
+        model.save_weights(f"{cfg.model.save_path}{model_name}.weights.h5")
         loss, accuracy, top_5_accuracy, precision, recall, f1_score = model.evaluate(
             test_data
         )
+        _model_history(history, cfg)
+
         print(f"Test loss: {round(loss, 2)}")
         print(f"Test accuracy: {round(accuracy * 100, 2)}%")
-        print(f"Test top 5 accuracy: {round(top_5_accuracy * 100, 2)}%")
-        print(f"Test precision: {round(precision * 100, 2)}%")
-        print(f"Test recall: {round(recall * 100, 2)}%")
-        print(f"Test f1_score: {round(f1_score * 100, 2)}%")
+        # print(f"Test top 5 accuracy: {round(top_5_accuracy * 100, 2)}%")
+        # print(f"Test precision: {round(precision * 100, 2)}%")
+        # print(f"Test recall: {round(recall * 100, 2)}%")
+        # print(f"Test f1_score: {round(f1_score * 100, 2)}%")
 
         y_pred = model.predict(test_data)
         y_pred = np.argmax(y_pred, axis=1)
@@ -157,8 +161,7 @@ def main(cfg):
             f"{cfg.model.history_path}{model_name}_classification_report.json", "w"
         ) as f:
             f.write(json_report)
-
-        _model_history(history, cfg)
+   
 
     elif model_name == "gcvit":
         # Model Params
@@ -186,7 +189,9 @@ def main(cfg):
             verbose=1,
         )
         model.save(f"{cfg.model.save_path}{model_name}_model.keras")
+        model.save_weights(f"{cfg.model.save_path}{model_name}.weights.h5")
         loss, accuracy, precision, recall, f1_score = model.evaluate(test_data)
+        _model_history(history, cfg)
         print(f"Test loss: {round(loss, 2)}")
         print(f"Test accuracy: {round(accuracy * 100, 2)}%")
         print(f"Test precision: {round(precision * 100, 2)}%")
@@ -235,8 +240,7 @@ def main(cfg):
             f"{cfg.model.history_path}{model_name}_classification_report.json", "w"
         ) as f:
             f.write(json_report)
-
-        _model_history(history, cfg)
+       
 
 def _model_history(model_info, cfg):
     accuracy = model_info.history["accuracy"]

@@ -1,0 +1,2 @@
+[2024-03-06 08:28:20,375][tensorflow][WARNING] - From C:\Users\muham\AppData\Local\Programs\Python\Python311\Lib\site-packages\keras\src\backend\tensorflow\core.py:174: The name tf.placeholder is deprecated. Please use tf.compat.v1.placeholder instead.
+

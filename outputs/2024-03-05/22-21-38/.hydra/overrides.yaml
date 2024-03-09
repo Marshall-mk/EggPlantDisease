@@ -1,0 +1,3 @@
+- model.model_name=dense_net
+- train.batch_size=64
+- train.epochs=25

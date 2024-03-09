@@ -1,0 +1,3 @@
+- model.model_name=swinvit
+- train.batch_size=16
+- train.epochs=40
