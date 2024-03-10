@@ -6,7 +6,7 @@ class DataLoader:
     """Data Loader class"""
 
     def __init__(self):
-        super().__init__()
+        super(DataLoader, self).__init__()
 
     def image_equalization(self, image):
         """Equalizes the histogram of an image"""
